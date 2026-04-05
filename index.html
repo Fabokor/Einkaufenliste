@@ -467,7 +467,7 @@ function hl(name,q){
 
 function pick(name,preis){
   document.getElementById('inpName').value=name;
-  document.getElementById('inpPreis').value=preis.toFixed(2);
+  document.getElementById('inpPreis').value=preis.toFixed(2).replace('.',',');
   document.getElementById('acBox').style.display='none';
   // Prefill Preisrechner Referenzpreis
   document.getElementById('calcEtikett').value=preis.toFixed(2);
@@ -504,8 +504,8 @@ function toBase(val, u){
 
 function calcPreis(){
   // Etikett-Werte (was auf dem Preisschild steht)
-  const etPreis = parseFloat(document.getElementById('calcEtikett').value);
-  const etMenge = parseFloat(document.getElementById('calcEtikettMenge').value)||1;
+  const etPreis = parseFloat(document.getElementById('calcEtikett').value.replace(',','.'));
+  const etMenge = parseFloat((document.getElementById('calcEtikettMenge').value||'1').replace(',','.'))||1;
   const etUnit  = document.getElementById('calcEtikettUnit').value;
   // Mein Gewicht (was ich wirklich kaufe)
   const meinGew  = parseFloat(document.getElementById('inpGew').value);
@@ -541,9 +541,10 @@ function useCalcPrice(){
 // ============ ARTIKEL HINZUFÜGEN ============
 function addItem(){
   const name=document.getElementById('inpName').value.trim();
-  const preis=parseFloat(document.getElementById('inpPreis').value);
+  const preisRaw=document.getElementById('inpPreis').value.replace(',','.');
+  const preis=preisRaw===''?0:parseFloat(preisRaw);
   const menge=parseInt(document.getElementById('inpMenge').value)||1;
-  const gw=document.getElementById('inpGew').value;
+  const gw=document.getElementById('inpGew').value.replace(',','.');
   const gewicht=gw?parseFloat(gw):null;
   if(!name){shake('inpName');return;}
   if(isNaN(preis)||preis<0){shake('inpPreis');return;}
@@ -596,7 +597,7 @@ function saveEdit(){
   const it=items.find(i=>i.id===editId);
   if(!it)return;
   const name=document.getElementById('editName').value.trim();
-  const preis=parseFloat(document.getElementById('editPreis').value);
+  const preis=parseFloat((document.getElementById('editPreis').value||'0').replace(',','.'));
   const menge=parseInt(document.getElementById('editMenge').value)||1;
   const gw=document.getElementById('editGew').value;
   if(!name){document.getElementById('editName').style.borderColor='var(--danger)';return;}
