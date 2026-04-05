@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Einkaufsliste</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0f0e0c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Einkaufen">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Smarte Einkaufsliste mit Preisrechner">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" type="image/svg+xml" href="./icon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+:root{--bg:#0f0e0c;--surface:#1a1916;--surface2:#242320;--accent:#f5c842;--accent2:#e8a020;--text:#f0ece3;--muted:#7a7770;--danger:#e05a4a;--success:#5cba7d;--border:#2e2c28;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;padding:0 0 110px 0;}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#1a1916,#0f0e0c);border-bottom:1px solid var(--border);padding:20px 16px 16px;position:sticky;top:0;z-index:200;}
+.header-top{display:flex;align-items:center;gap:10px;margin-bottom:3px;}
+.cart-icon{font-size:24px;animation:bounce 2s ease-in-out infinite;}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.header h1{font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--accent);}
+.header-sub{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;}
+
+/* CATS */
+.cats-wrap{margin:12px 14px 0;overflow-x:auto;}
+.cats-wrap::-webkit-scrollbar{display:none;}
+.cats-row{display:flex;gap:6px;padding-bottom:2px;}
+.cat-btn{background:var(--surface);border:1px solid var(--border);border-radius:20px;color:var(--muted);font-family:'Syne',sans-serif;font-size:11px;font-weight:600;padding:5px 12px;white-space:nowrap;cursor:pointer;transition:all .15s;flex-shrink:0;}
+.cat-btn.active{background:rgba(245,200,66,.12);border-color:var(--accent);color:var(--accent);}
+
+/* INPUT CARD */
+.input-card{margin:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:16px;}
+.card-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;}
+
+/* SEARCH */
+.search-wrap{position:relative;margin-bottom:10px;}
+.search-wrap>label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'DM Mono',monospace;display:block;margin-bottom:4px;}
+.search-inner{position:relative;}
+.si{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;}
+#inpName{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:'Syne',sans-serif;font-size:14px;padding:10px 12px 10px 34px;outline:none;width:100%;transition:border-color .2s,box-shadow .2s;}
+#inpName:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,200,66,.15);}
+#inpName::placeholder{color:#454340;}
+
+/* AUTOCOMPLETE */
+.ac-box{position:absolute;top:calc(100% + 5px);left:0;right:0;background:var(--surface2);border:1.5px solid var(--accent);border-radius:13px;max-height:220px;overflow-y:auto;z-index:500;box-shadow:0 12px 40px rgba(0,0,0,.7);animation:dropIn .12s ease;}
+@keyframes dropIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+.ac-box::-webkit-scrollbar{width:3px;}
+.ac-box::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.ac-group{font-size:9px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:1.2px;padding:7px 13px 3px;font-family:'DM Mono',monospace;border-bottom:1px solid var(--border);}
+.ac-item{padding:9px 13px;cursor:pointer;display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;transition:background .1s;border-bottom:1px solid rgba(46,44,40,.4);}
+.ac-item:last-child{border-bottom:none;}
+.ac-item:hover,.ac-item.sel{background:rgba(245,200,66,.1);}
+.ac-em{font-size:17px;flex-shrink:0;}
+.ac-info{flex:1;min-width:0;}
+.ac-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ac-meta{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;}
+.ac-price{font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);flex-shrink:0;}
+
+/* FIELDS */
+.fields-row{display:grid;grid-template-columns:1fr 80px 72px 70px;gap:7px;margin-bottom:10px;}
+.ig{display:flex;flex-direction:column;gap:3px;}
+.ig label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'DM Mono',monospace;}
+.ig input{background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;color:var(--text);font-family:'Syne',sans-serif;font-size:13px;padding:9px 8px;outline:none;width:100%;transition:border-color .2s,box-shadow .2s;}
+.ig input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(245,200,66,.12);}
+.ig input::placeholder{color:#454340;}
+.opt{font-size:9px;color:#454340;font-family:'DM Mono',monospace;}
+.unit-wrap{display:flex;flex-direction:column;gap:3px;}
+.unit-wrap label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'DM Mono',monospace;}
+.unit-btns{display:flex;gap:3px;height:38px;}
+.ub{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;}
+.ub.active{background:rgba(245,200,66,.15);border-color:var(--accent);color:var(--accent);}
+
+/* PREISRECHNER */
+.calc-box{background:var(--surface2);border:1px solid rgba(245,200,66,.2);border-radius:13px;padding:13px 14px;margin-bottom:10px;display:none;}
+.calc-box.show{display:block;}
+.calc-hint{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;}
+.calc-hint strong{color:var(--text);}
+.calc-simple-row{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:10px;}
+.calc-sep{font-size:18px;color:var(--muted);text-align:center;padding-top:18px;}
+.calc-simple-field{display:flex;flex-direction:column;gap:4px;}
+.calc-simple-field label{font-size:11px;font-weight:700;color:var(--accent2);font-family:'DM Mono',monospace;}
+.calc-simple-field .inp-unit-wrap{display:flex;gap:4px;}
+.calc-simple-field input{background:var(--bg);border:1.5px solid var(--border);border-radius:9px;color:var(--text);font-family:'Syne',sans-serif;font-size:15px;font-weight:700;padding:10px;outline:none;width:100%;transition:border-color .2s;text-align:center;}
+.calc-simple-field input:focus{border-color:var(--accent);}
+.calc-unit-sel{background:var(--bg);border:1.5px solid var(--border);border-radius:9px;color:var(--accent);font-family:'DM Mono',monospace;font-size:13px;font-weight:700;padding:10px 6px;outline:none;cursor:pointer;width:56px;}
+.calc-result{background:rgba(245,200,66,.08);border:1.5px solid rgba(245,200,66,.3);border-radius:10px;padding:12px 14px;display:none;text-align:center;}
+.calc-result.show{display:block;}
+.calc-res-val{font-size:26px;font-weight:800;color:var(--accent);margin-bottom:2px;}
+.calc-res-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:8px;}
+.btn-use-price{width:100%;background:var(--accent);color:#0f0e0c;border:none;border-radius:9px;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;padding:10px;cursor:pointer;transition:background .15s;}
+.btn-use-price:hover{background:var(--accent2);}
+
+.btn-add{width:100%;background:var(--accent);color:#0f0e0c;border:none;border-radius:11px;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;padding:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:transform .15s,background .2s;}
+.btn-add:hover{background:var(--accent2);}
+.btn-add:active{transform:scale(.97);}
+
+/* LIST */
+.list-section{padding:0 14px;}
+.list-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
+.list-hdr h2{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;}
+.icount{background:var(--surface2);color:var(--accent);font-family:'DM Mono',monospace;font-size:10px;padding:3px 9px;border-radius:20px;border:1px solid var(--border);}
+.col-lbl{display:grid;grid-template-columns:1fr 68px 56px 60px;gap:5px;padding:0 11px;margin-bottom:4px;}
+.col-lbl span{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'DM Mono',monospace;}
+.col-lbl span:nth-child(2),.col-lbl span:nth-child(3){text-align:right;}
+.col-lbl span:nth-child(4){text-align:center;}
+.items-list{display:flex;flex-direction:column;gap:6px;}
+
+.icard{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:10px 11px;display:grid;grid-template-columns:1fr 68px 56px 60px;gap:5px;align-items:center;animation:fadeIn .25s ease;transition:border-color .2s;}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.icard.chk{opacity:.4;}
+.inw{display:flex;align-items:center;gap:7px;min-width:0;}
+.ichk{width:18px;height:18px;border-radius:5px;border:2px solid var(--border);background:transparent;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.ichk.on{background:var(--success);border-color:var(--success);}
+.ichk.on::after{content:'✓';color:white;font-size:10px;font-weight:700;}
+.iem{font-size:15px;flex-shrink:0;}
+.iinf{min-width:0;}
+.iname{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.icard.chk .iname{text-decoration:line-through;}
+.isub{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px;}
+.ipr{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:right;}
+.itot{font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--accent);text-align:right;}
+.iactions{display:flex;gap:3px;justify-content:center;}
+.bedit,.bdel{background:none;border:none;font-size:14px;cursor:pointer;padding:3px 5px;border-radius:7px;transition:all .15s;display:flex;align-items:center;justify-content:center;}
+.bedit{color:#4a4845;}
+.bedit:hover{color:var(--accent);background:rgba(245,200,66,.12);}
+.bdel{color:#3a3835;}
+.bdel:hover{color:var(--danger);background:rgba(224,90,74,.12);}
+
+.empty{text-align:center;padding:40px 20px;color:var(--muted);}
+.empty-icon{font-size:40px;margin-bottom:10px;opacity:.35;}
+.empty p{font-size:13px;line-height:1.6;}
+
+/* SUMMARY */
+.sum-bar{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(180deg,transparent 0%,var(--bg) 20%);padding:12px 14px 20px;z-index:200;}
+.sum-card{background:var(--surface);border:1.5px solid var(--accent);border-radius:16px;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 32px rgba(0,0,0,.5);}
+.sum-lft{display:flex;flex-direction:column;gap:2px;}
+.sum-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;}
+.sum-its{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;}
+.sum-tot{font-size:28px;font-weight:800;color:var(--accent);letter-spacing:-1px;}
+.sum-cur{font-size:14px;font-weight:600;color:var(--accent2);margin-right:2px;}
+.bclr{background:rgba(224,90,74,.12);border:1px solid rgba(224,90,74,.25);color:var(--danger);font-family:'Syne',sans-serif;font-size:11px;font-weight:700;padding:7px 11px;border-radius:9px;cursor:pointer;transition:background .15s;}
+.bclr:hover{background:rgba(224,90,74,.25);}
+
+/* EDIT MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:22px 22px 0 0;padding:20px 18px 32px;width:100%;max-width:480px;animation:slideUp .25s ease;}
+@keyframes slideUp{from{transform:translateY(60px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;}
+.modal-title{font-size:16px;font-weight:800;color:var(--accent);margin-bottom:16px;}
+.modal-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+.modal-field{display:flex;flex-direction:column;gap:4px;}
+.modal-field label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'DM Mono',monospace;}
+.modal-field input{background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:'Syne',sans-serif;font-size:14px;padding:10px;outline:none;width:100%;transition:border-color .2s,box-shadow .2s;}
+.modal-field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(245,200,66,.12);}
+.modal-field.full{grid-column:1/-1;}
+.modal-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.btn-save{background:var(--accent);color:#0f0e0c;border:none;border-radius:11px;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;padding:13px;cursor:pointer;transition:background .15s;}
+.btn-save:hover{background:var(--accent2);}
+.btn-cancel{background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:11px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;padding:13px;cursor:pointer;transition:background .15s;}
+.btn-cancel:hover{background:var(--border);}
+
+/* UNIT TOGGLE IN MODAL */
+.modal-unit-row{display:flex;gap:6px;margin-bottom:14px;}
+.modal-unit-btn{flex:1;background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;color:var(--muted);font-family:'DM Mono',monospace;font-size:12px;font-weight:600;padding:8px;cursor:pointer;transition:all .15s;}
+.modal-unit-btn.active{background:rgba(245,200,66,.15);border-color:var(--accent);color:var(--accent);}
+
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}60%{transform:translateX(5px)}}
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top"><span class="cart-icon">🛒</span><h1>Einkaufsliste</h1></div>
+  <div class="header-sub">Lidl · Aldi · Rewe · Edeka · Penny · Netto · Kaufland</div>
+</div>
+
+<div class="cats-wrap"><div class="cats-row" id="catsRow"></div></div>
+
+<div class="input-card">
+  <div class="card-title">Artikel hinzufügen</div>
+
+  <!-- SUCHE -->
+  <div class="search-wrap">
+    <label>Artikel suchen oder eingeben</label>
+    <div class="search-inner">
+      <span class="si">🔍</span>
+      <input type="text" id="inpName" placeholder="z.B. Milch, Brot, Äpfel…" autocomplete="off"/>
+    </div>
+    <div class="ac-box" id="acBox" style="display:none;"></div>
+  </div>
+
+  <!-- FELDER -->
+  <div class="fields-row">
+    <div class="ig"><label>Preis (€)</label><input type="number" id="inpPreis" placeholder="0,00" min="0" step="0.01"/></div>
+    <div class="ig"><label>Menge</label><input type="number" id="inpMenge" placeholder="1" min="1" step="1" value="1"/></div>
+    <div class="ig"><label>Gewicht <span class="opt">(opt.)</span></label><input type="number" id="inpGew" placeholder="500" min="0" step="any" oninput="onGewichtChange()"/></div>
+    <div class="unit-wrap">
+      <label>Einheit</label>
+      <div class="unit-btns">
+        <button class="ub active" id="unitG" onclick="setUnit('g')">g</button>
+        <button class="ub" id="unitKg" onclick="setUnit('kg')">kg</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREISRECHNER -->
+  <div class="calc-box" id="calcBox">
+    <div class="calc-hint">⚖️ <strong>Preisrechner:</strong> Preis vom Etikett eingeben → ich berechne was du wirklich zahlst.</div>
+    <div class="calc-simple-row">
+      <div class="calc-simple-field">
+        <label>Preis auf Etikett</label>
+        <div class="inp-unit-wrap">
+          <input type="number" id="calcEtikett" placeholder="2,99" min="0" step="0.01" oninput="calcPreis()"/>
+        </div>
+      </div>
+      <div class="calc-sep">pro</div>
+      <div class="calc-simple-field">
+        <label>Menge auf Etikett</label>
+        <div class="inp-unit-wrap">
+          <input type="number" id="calcEtikettMenge" placeholder="1" min="0" step="any" oninput="calcPreis()" style="border-radius:9px 0 0 9px;border-right:none;"/>
+          <select id="calcEtikettUnit" onchange="calcPreis()" class="calc-unit-sel" style="border-radius:0 9px 9px 0;">
+            <option value="kg">kg</option>
+            <option value="g">g</option>
+            <option value="l">l</option>
+            <option value="ml">ml</option>
+            <option value="stk">Stk</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="calc-result" id="calcResult">
+      <div class="calc-res-val" id="calcResVal">€ 0,00</div>
+      <div class="calc-res-sub" id="calcResSub"></div>
+      <button class="btn-use-price" onclick="useCalcPrice()">✓ Diesen Preis verwenden</button>
+    </div>
+  </div>
+
+  <button class="btn-add" onclick="addItem()">＋ Hinzufügen</button>
+</div>
+
+<!-- LISTE -->
+<div class="list-section">
+  <div class="list-hdr"><h2>Meine Liste</h2><span class="icount" id="icount">0 Artikel</span></div>
+  <div class="col-lbl"><span>Artikel</span><span>Preis</span><span>Gesamt</span><span>Aktionen</span></div>
+  <div class="items-list" id="itemsList"></div>
+</div>
+
+<!-- SUMME -->
+<div class="sum-bar">
+  <div class="sum-card">
+    <div class="sum-lft">
+      <span class="sum-lbl">Gesamtsumme</span>
+      <span class="sum-its" id="sumIts">0 Artikel</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="sum-tot"><span class="sum-cur">€</span><span id="totDisp">0,00</span></div>
+      <button class="bclr" onclick="clearAll()">Leeren</button>
+    </div>
+  </div>
+</div>
+
+<!-- BEARBEITEN MODAL -->
+<div class="modal-overlay" id="editOverlay" onclick="closeEdit(event)">
+  <div class="modal" id="editModal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">✏️ Artikel bearbeiten</div>
+    <div class="modal-fields">
+      <div class="modal-field full"><label>Artikelname</label><input type="text" id="editName" placeholder="Name"/></div>
+      <div class="modal-field"><label>Preis (€)</label><input type="number" id="editPreis" placeholder="0,00" min="0" step="0.01"/></div>
+      <div class="modal-field"><label>Menge</label><input type="number" id="editMenge" placeholder="1" min="1" step="1"/></div>
+      <div class="modal-field"><label>Gewicht <span class="opt">(opt.)</span></label><input type="number" id="editGew" placeholder="500" min="0" step="any"/></div>
+      <div class="modal-field"><label>Einheit</label>
+        <div class="modal-unit-row" style="margin-bottom:0;">
+          <button class="modal-unit-btn active" id="editUnitG" onclick="setEditUnit('g')">g</button>
+          <button class="modal-unit-btn" id="editUnitKg" onclick="setEditUnit('kg')">kg</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeEditModal()">Abbrechen</button>
+      <button class="btn-save" onclick="saveEdit()">💾 Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== PRODUKTDATENBANK =====================
+const PRODUCTS=[
+  {n:"Vollmilch 3,5%",e:"🥛",c:"Milchprodukte",p:1.09},{n:"Fettarme Milch 1,5%",e:"🥛",c:"Milchprodukte",p:0.99},
+  {n:"Laktosefreie Milch",e:"🥛",c:"Milchprodukte",p:1.39},{n:"Butter 250g",e:"🧈",c:"Milchprodukte",p:1.89},
+  {n:"Margarine 500g",e:"🧈",c:"Milchprodukte",p:1.29},{n:"Joghurt Natur",e:"🥛",c:"Milchprodukte",p:0.49},
+  {n:"Griechischer Joghurt",e:"🥛",c:"Milchprodukte",p:0.89},{n:"Sahne 200ml",e:"🥛",c:"Milchprodukte",p:0.79},
+  {n:"Schmand 200g",e:"🥛",c:"Milchprodukte",p:0.59},{n:"Quark Mager",e:"🥛",c:"Milchprodukte",p:0.69},
+  {n:"Speisequark 40%",e:"🥛",c:"Milchprodukte",p:0.79},{n:"Gouda Scheiben 400g",e:"🧀",c:"Milchprodukte",p:2.49},
+  {n:"Edamer Scheiben",e:"🧀",c:"Milchprodukte",p:2.29},{n:"Mozzarella 125g",e:"🧀",c:"Milchprodukte",p:0.89},
+  {n:"Camembert",e:"🧀",c:"Milchprodukte",p:1.19},{n:"Frischkäse Doppelrahm",e:"🧀",c:"Milchprodukte",p:1.09},
+  {n:"Parmesan gerieben",e:"🧀",c:"Milchprodukte",p:1.99},{n:"Hüttenkäse",e:"🧀",c:"Milchprodukte",p:1.19},
+  {n:"Eier 10 Stück",e:"🥚",c:"Milchprodukte",p:2.49},{n:"Eier 6 Stück",e:"🥚",c:"Milchprodukte",p:1.69},
+  {n:"Schlagsahne 200ml",e:"🥛",c:"Milchprodukte",p:0.89},{n:"Crème fraîche",e:"🥛",c:"Milchprodukte",p:0.79},
+  {n:"Toastbrot",e:"🍞",c:"Brot & Backwaren",p:1.29},{n:"Vollkornbrot",e:"🍞",c:"Brot & Backwaren",p:1.99},
+  {n:"Weißbrot",e:"🥖",c:"Brot & Backwaren",p:1.49},{n:"Baguette",e:"🥖",c:"Brot & Backwaren",p:0.99},
+  {n:"Brötchen 6 Stück",e:"🥐",c:"Brot & Backwaren",p:1.39},{n:"Croissant",e:"🥐",c:"Brot & Backwaren",p:0.59},
+  {n:"Laugenbrezel",e:"🥨",c:"Brot & Backwaren",p:0.79},{n:"Roggenbrot",e:"🍞",c:"Brot & Backwaren",p:2.19},
+  {n:"Körner-Brot",e:"🍞",c:"Brot & Backwaren",p:2.29},{n:"Zwieback",e:"🍞",c:"Brot & Backwaren",p:1.69},
+  {n:"Knäckebrot",e:"🍞",c:"Brot & Backwaren",p:1.39},{n:"Mehl Type 405",e:"🌾",c:"Brot & Backwaren",p:0.89},
+  {n:"Mehl Type 550",e:"🌾",c:"Brot & Backwaren",p:0.99},{n:"Backhefe",e:"🌾",c:"Brot & Backwaren",p:0.19},
+  {n:"Backpulver",e:"🌾",c:"Brot & Backwaren",p:0.49},
+  {n:"Hähnchenbrust 500g",e:"🍗",c:"Fleisch & Wurst",p:3.99},{n:"Hackfleisch gemischt 500g",e:"🥩",c:"Fleisch & Wurst",p:3.49},
+  {n:"Schweineschnitzel",e:"🥩",c:"Fleisch & Wurst",p:4.49},{n:"Rindfleisch Gulasch 500g",e:"🥩",c:"Fleisch & Wurst",p:5.99},
+  {n:"Lammfleisch",e:"🥩",c:"Fleisch & Wurst",p:6.99},{n:"Salami Aufschnitt",e:"🍖",c:"Fleisch & Wurst",p:1.79},
+  {n:"Kochschinken",e:"🍖",c:"Fleisch & Wurst",p:1.99},{n:"Putenbrust Aufschnitt",e:"🍖",c:"Fleisch & Wurst",p:1.89},
+  {n:"Wiener Würstchen 5 St.",e:"🌭",c:"Fleisch & Wurst",p:2.49},{n:"Bratwurst",e:"🌭",c:"Fleisch & Wurst",p:2.99},
+  {n:"Bacon Streifen",e:"🥓",c:"Fleisch & Wurst",p:2.29},{n:"Leberwurst",e:"🍖",c:"Fleisch & Wurst",p:1.49},
+  {n:"Türkische Sucuk",e:"🌭",c:"Fleisch & Wurst",p:2.49},{n:"Döner Fleisch TK",e:"🥙",c:"Fleisch & Wurst",p:5.99},
+  {n:"Lachsfilet 300g",e:"🐟",c:"Fisch & Meeresfrüchte",p:4.99},{n:"Thunfisch Dose",e:"🐟",c:"Fisch & Meeresfrüchte",p:1.29},
+  {n:"Sardinen Dose",e:"🐟",c:"Fisch & Meeresfrüchte",p:0.99},{n:"Garnelen TK 300g",e:"🦐",c:"Fisch & Meeresfrüchte",p:4.49},
+  {n:"Fischstäbchen TK",e:"🐟",c:"Fisch & Meeresfrüchte",p:2.49},{n:"Pangasius Filet TK",e:"🐟",c:"Fisch & Meeresfrüchte",p:3.49},
+  {n:"Makrele Dose",e:"🐟",c:"Fisch & Meeresfrüchte",p:1.19},
+  {n:"Äpfel 1kg",e:"🍎",c:"Obst & Gemüse",p:2.49},{n:"Bananen 1kg",e:"🍌",c:"Obst & Gemüse",p:1.49},
+  {n:"Orangen 1kg",e:"🍊",c:"Obst & Gemüse",p:1.99},{n:"Zitronen 500g",e:"🍋",c:"Obst & Gemüse",p:1.29},
+  {n:"Trauben 500g",e:"🍇",c:"Obst & Gemüse",p:2.49},{n:"Erdbeeren 500g",e:"🍓",c:"Obst & Gemüse",p:2.99},
+  {n:"Wassermelone",e:"🍉",c:"Obst & Gemüse",p:3.99},{n:"Ananas",e:"🍍",c:"Obst & Gemüse",p:1.99},
+  {n:"Mango",e:"🥭",c:"Obst & Gemüse",p:1.49},{n:"Avocado",e:"🥑",c:"Obst & Gemüse",p:1.19},
+  {n:"Tomaten 500g",e:"🍅",c:"Obst & Gemüse",p:1.49},{n:"Rispentomaten",e:"🍅",c:"Obst & Gemüse",p:1.79},
+  {n:"Cherrytomaten 250g",e:"🍅",c:"Obst & Gemüse",p:1.49},{n:"Gurke",e:"🥒",c:"Obst & Gemüse",p:0.79},
+  {n:"Paprika rot",e:"🫑",c:"Obst & Gemüse",p:0.99},{n:"Paprika gelb",e:"🫑",c:"Obst & Gemüse",p:0.99},
+  {n:"Zwiebeln 1kg",e:"🧅",c:"Obst & Gemüse",p:0.99},{n:"Knoblauch",e:"🧄",c:"Obst & Gemüse",p:0.59},
+  {n:"Kartoffeln 1,5kg",e:"🥔",c:"Obst & Gemüse",p:1.99},{n:"Karotten 1kg",e:"🥕",c:"Obst & Gemüse",p:0.99},
+  {n:"Brokkoli",e:"🥦",c:"Obst & Gemüse",p:1.29},{n:"Blumenkohl",e:"🥦",c:"Obst & Gemüse",p:1.49},
+  {n:"Spinat frisch",e:"🥬",c:"Obst & Gemüse",p:1.29},{n:"Eisbergsalat",e:"🥬",c:"Obst & Gemüse",p:0.89},
+  {n:"Zucchini",e:"🥒",c:"Obst & Gemüse",p:0.89},{n:"Aubergine",e:"🍆",c:"Obst & Gemüse",p:0.99},
+  {n:"Champignons 400g",e:"🍄",c:"Obst & Gemüse",p:1.29},{n:"Frühlingszwiebeln",e:"🧅",c:"Obst & Gemüse",p:0.69},
+  {n:"Mais Dose",e:"🌽",c:"Obst & Gemüse",p:0.79},{n:"Erbsen TK 750g",e:"🫛",c:"Obst & Gemüse",p:1.49},
+  {n:"Ingwer",e:"🫚",c:"Obst & Gemüse",p:0.89},{n:"Chili frisch",e:"🌶️",c:"Obst & Gemüse",p:0.79},
+  {n:"Süßkartoffeln 1kg",e:"🍠",c:"Obst & Gemüse",p:2.49},{n:"Kohlrabi",e:"🥦",c:"Obst & Gemüse",p:0.89},
+  {n:"Tomaten passiert Dose",e:"🥫",c:"Konserven",p:0.59},{n:"Tomaten gehackt Dose",e:"🥫",c:"Konserven",p:0.69},
+  {n:"Kichererbsen Dose",e:"🥫",c:"Konserven",p:0.89},{n:"Rote Bohnen Dose",e:"🥫",c:"Konserven",p:0.79},
+  {n:"Kokosmilch Dose",e:"🥫",c:"Konserven",p:1.29},{n:"Oliven Glas",e:"🫒",c:"Konserven",p:1.99},
+  {n:"Kidneybohnen Dose",e:"🥫",c:"Konserven",p:0.79},{n:"Sauerkraut Dose",e:"🥫",c:"Konserven",p:0.69},
+  {n:"Spaghetti 500g",e:"🍝",c:"Nudeln & Reis",p:0.99},{n:"Penne 500g",e:"🍝",c:"Nudeln & Reis",p:0.99},
+  {n:"Fusilli 500g",e:"🍝",c:"Nudeln & Reis",p:0.99},{n:"Lasagneplatten",e:"🍝",c:"Nudeln & Reis",p:1.29},
+  {n:"Reis 1kg",e:"🍚",c:"Nudeln & Reis",p:1.49},{n:"Basmati Reis 1kg",e:"🍚",c:"Nudeln & Reis",p:2.49},
+  {n:"Jasminreis 1kg",e:"🍚",c:"Nudeln & Reis",p:2.29},{n:"Couscous 500g",e:"🌾",c:"Nudeln & Reis",p:1.49},
+  {n:"Bulgur 500g",e:"🌾",c:"Nudeln & Reis",p:1.39},{n:"Quinoa 400g",e:"🌾",c:"Nudeln & Reis",p:2.99},
+  {n:"Haferflocken 500g",e:"🌾",c:"Nudeln & Reis",p:0.89},{n:"Müsli 500g",e:"🌾",c:"Nudeln & Reis",p:2.49},
+  {n:"Mineralwasser still 1,5l",e:"💧",c:"Getränke",p:0.39},{n:"Mineralwasser sprudelnd 1,5l",e:"💧",c:"Getränke",p:0.39},
+  {n:"Cola 1,5l",e:"🥤",c:"Getränke",p:1.99},{n:"Cola Zero 1,5l",e:"🥤",c:"Getränke",p:1.99},
+  {n:"Fanta 1,5l",e:"🥤",c:"Getränke",p:1.99},{n:"Apfelsaft 1l",e:"🍎",c:"Getränke",p:1.49},
+  {n:"Orangensaft 1l",e:"🍊",c:"Getränke",p:1.79},{n:"Eistee Pfirsich 1,5l",e:"🍵",c:"Getränke",p:1.29},
+  {n:"Kaffee gemahlen 500g",e:"☕",c:"Getränke",p:4.99},{n:"Kaffee Bohnen 500g",e:"☕",c:"Getränke",p:6.99},
+  {n:"Schwarztee 20 Beutel",e:"🍵",c:"Getränke",p:1.49},{n:"Grüntee 20 Beutel",e:"🍵",c:"Getränke",p:1.69},
+  {n:"Kakao 400g",e:"🍫",c:"Getränke",p:2.49},{n:"Bier 6er Pack",e:"🍺",c:"Getränke",p:4.99},
+  {n:"Weißwein 0,75l",e:"🍷",c:"Getränke",p:3.99},{n:"Rotwein 0,75l",e:"🍷",c:"Getränke",p:4.49},
+  {n:"Sekt 0,75l",e:"🥂",c:"Getränke",p:3.49},{n:"Haferdrink 1l",e:"🌾",c:"Getränke",p:1.59},
+  {n:"Sojadrink 1l",e:"🥛",c:"Getränke",p:1.49},{n:"Ayran 500ml",e:"🥛",c:"Getränke",p:0.99},
+  {n:"Salz 500g",e:"🧂",c:"Gewürze & Saucen",p:0.39},{n:"Pfeffer gemahlen",e:"🧂",c:"Gewürze & Saucen",p:1.29},
+  {n:"Paprikapulver",e:"🌶️",c:"Gewürze & Saucen",p:0.99},{n:"Kreuzkümmel",e:"🧂",c:"Gewürze & Saucen",p:0.99},
+  {n:"Kurkuma",e:"🧂",c:"Gewürze & Saucen",p:1.19},{n:"Oregano getrocknet",e:"🌿",c:"Gewürze & Saucen",p:0.69},
+  {n:"Basilikum getrocknet",e:"🌿",c:"Gewürze & Saucen",p:0.69},{n:"Ketchup 500ml",e:"🥫",c:"Gewürze & Saucen",p:1.49},
+  {n:"Senf mittelscharf",e:"🥫",c:"Gewürze & Saucen",p:0.79},{n:"Mayonnaise 250ml",e:"🥫",c:"Gewürze & Saucen",p:1.29},
+  {n:"Sojasauce",e:"🫙",c:"Gewürze & Saucen",p:1.99},{n:"Tabasco",e:"🌶️",c:"Gewürze & Saucen",p:2.49},
+  {n:"Olivenöl 500ml",e:"🫚",c:"Gewürze & Saucen",p:4.99},{n:"Sonnenblumenöl 1l",e:"🫚",c:"Gewürze & Saucen",p:2.49},
+  {n:"Tomatenmark 200g",e:"🥫",c:"Gewürze & Saucen",p:0.49},{n:"Pesto Basilikum",e:"🫙",c:"Gewürze & Saucen",p:1.99},
+  {n:"Bolognese Sauce Glas",e:"🫙",c:"Gewürze & Saucen",p:2.49},{n:"Curry Pulver",e:"🧂",c:"Gewürze & Saucen",p:0.99},
+  {n:"Harissa Paste",e:"🌶️",c:"Gewürze & Saucen",p:1.49},{n:"Honig 500g",e:"🍯",c:"Gewürze & Saucen",p:3.49},
+  {n:"Zucker 1kg",e:"🧂",c:"Gewürze & Saucen",p:1.19},{n:"Essig 5%",e:"🫙",c:"Gewürze & Saucen",p:0.59},
+  {n:"Schokolade Vollmilch 100g",e:"🍫",c:"Süßes & Snacks",p:1.09},{n:"Schokolade Zartbitter 100g",e:"🍫",c:"Süßes & Snacks",p:1.19},
+  {n:"Nutella 450g",e:"🍫",c:"Süßes & Snacks",p:3.29},{n:"Marmelade Erdbeere",e:"🍓",c:"Süßes & Snacks",p:1.49},
+  {n:"Chips Paprika 150g",e:"🥔",c:"Süßes & Snacks",p:1.49},{n:"Chips Salz 150g",e:"🥔",c:"Süßes & Snacks",p:1.49},
+  {n:"Salzstangen 250g",e:"🥨",c:"Süßes & Snacks",p:0.99},{n:"Kekse Butterkeks",e:"🍪",c:"Süßes & Snacks",p:1.09},
+  {n:"Kekse Oreo",e:"🍪",c:"Süßes & Snacks",p:1.79},{n:"Gummibären 200g",e:"🍬",c:"Süßes & Snacks",p:0.99},
+  {n:"Erdnüsse gesalzen",e:"🥜",c:"Süßes & Snacks",p:1.49},{n:"Walnüsse 200g",e:"🌰",c:"Süßes & Snacks",p:2.49},
+  {n:"Pudding Vanille",e:"🍮",c:"Süßes & Snacks",p:0.49},
+  {n:"Toilettenpapier 8 Rollen",e:"🧻",c:"Haushalt",p:2.99},{n:"Toilettenpapier 16 Rollen",e:"🧻",c:"Haushalt",p:5.49},
+  {n:"Küchentücher 4 Rollen",e:"🧻",c:"Haushalt",p:2.49},{n:"Müllbeutel 35l",e:"🗑️",c:"Haushalt",p:2.49},
+  {n:"Müllbeutel 60l",e:"🗑️",c:"Haushalt",p:2.99},{n:"Spülmittel 500ml",e:"🧴",c:"Haushalt",p:0.99},
+  {n:"Spülmaschinentabs 40 St.",e:"🧴",c:"Haushalt",p:4.99},{n:"Allzweckreiniger",e:"🧴",c:"Haushalt",p:1.49},
+  {n:"WC-Reiniger",e:"🧴",c:"Haushalt",p:1.29},{n:"Waschmittel flüssig 1l",e:"🧺",c:"Haushalt",p:3.99},
+  {n:"Waschmittel Pulver 1kg",e:"🧺",c:"Haushalt",p:2.99},{n:"Weichspüler",e:"🧺",c:"Haushalt",p:2.49},
+  {n:"Alufolie",e:"🍱",c:"Haushalt",p:1.49},{n:"Frischhaltefolie",e:"🍱",c:"Haushalt",p:1.29},
+  {n:"Backpapier",e:"🍱",c:"Haushalt",p:1.49},{n:"Schwamm Spüle",e:"🧽",c:"Haushalt",p:0.79},
+  {n:"Shampoo 300ml",e:"🧴",c:"Körperpflege",p:2.49},{n:"Duschgel 300ml",e:"🧴",c:"Körperpflege",p:1.99},
+  {n:"Seife Stück",e:"🧼",c:"Körperpflege",p:0.99},{n:"Zahncreme 75ml",e:"🦷",c:"Körperpflege",p:1.49},
+  {n:"Zahnbürste",e:"🦷",c:"Körperpflege",p:1.99},{n:"Deo Roll-On",e:"🧴",c:"Körperpflege",p:2.49},
+  {n:"Deo Spray",e:"🧴",c:"Körperpflege",p:2.49},{n:"Taschentücher 10er",e:"🤧",c:"Körperpflege",p:1.49},
+  {n:"Windeln Gr.3",e:"👶",c:"Körperpflege",p:7.99},{n:"Wattestäbchen 200 St.",e:"🧴",c:"Körperpflege",p:1.19},
+  {n:"Pizza Margherita TK",e:"🍕",c:"Tiefkühl",p:2.49},{n:"Pizza Salami TK",e:"🍕",c:"Tiefkühl",p:2.79},
+  {n:"Pommes Frites TK 750g",e:"🍟",c:"Tiefkühl",p:1.99},{n:"Spinat TK 750g",e:"🥬",c:"Tiefkühl",p:1.69},
+  {n:"Gemüsemischung TK",e:"🥦",c:"Tiefkühl",p:1.79},{n:"Maultaschen TK",e:"🥟",c:"Tiefkühl",p:2.99},
+  {n:"Eis Vanille 1l",e:"🍦",c:"Tiefkühl",p:2.99},{n:"Hähnchen TK ganz",e:"🍗",c:"Tiefkühl",p:5.99},
+  {n:"Hundefutter nass",e:"🐶",c:"Tiernahrung",p:0.79},{n:"Hundefutter trocken 1kg",e:"🐶",c:"Tiernahrung",p:4.99},
+  {n:"Katzenfutter nass",e:"🐱",c:"Tiernahrung",p:0.69},{n:"Katzenfutter trocken 400g",e:"🐱",c:"Tiernahrung",p:3.49},
+  {n:"Katzenspreu 5l",e:"🐱",c:"Tiernahrung",p:3.99},
+];
+
+const CATS=['Alle',...new Set(PRODUCTS.map(p=>p.c))];
+const CE={'Alle':'🛒','Milchprodukte':'🥛','Brot & Backwaren':'🍞','Fleisch & Wurst':'🥩','Fisch & Meeresfrüchte':'🐟','Obst & Gemüse':'🍎','Konserven':'🥫','Nudeln & Reis':'🍝','Getränke':'🥤','Gewürze & Saucen':'🧂','Süßes & Snacks':'🍬','Haushalt':'🧹','Körperpflege':'🧴','Tiernahrung':'🐾','Tiefkühl':'🥶'};
+
+let items=JSON.parse(localStorage.getItem('ekl3')||'[]');
+let unit='g', cat='Alle', acIdx=-1, editId=null, editUnit='g';
+let lastCalcPrice=null;
+
+// ============ KATEGORIEN ============
+function buildCats(){
+  const r=document.getElementById('catsRow');r.innerHTML='';
+  CATS.forEach(c=>{
+    const b=document.createElement('button');
+    b.className='cat-btn'+(c===cat?' active':'');
+    b.textContent=(CE[c]||'•')+' '+c;
+    b.onclick=()=>{cat=c;buildCats();filterAC();};
+    r.appendChild(b);
+  });
+}
+
+// ============ AUTOCOMPLETE ============
+function getFiltered(q){
+  const ql=q.toLowerCase().trim();
+  let pool=cat==='Alle'?PRODUCTS:PRODUCTS.filter(p=>p.c===cat);
+  if(!ql)return pool.slice(0,35);
+  return pool.filter(p=>p.n.toLowerCase().includes(ql)).slice(0,50);
+}
+
+function filterAC(){
+  const q=document.getElementById('inpName').value;
+  const box=document.getElementById('acBox');
+  const res=getFiltered(q);
+  acIdx=-1;
+  if(!res.length){box.style.display='none';return;}
+  const grp={};
+  res.forEach(p=>{if(!grp[p.c])grp[p.c]=[];grp[p.c].push(p);});
+  let html='';
+  Object.entries(grp).forEach(([g,ps])=>{
+    html+=`<div class="ac-group">${g}</div>`;
+    ps.forEach((p,i)=>{
+      // FIX: use data-idx attribute instead of JSON in data-n to avoid JSON parse errors
+      html+=`<div class="ac-item" data-pname="${eh(p.n)}" data-pp="${p.p}">
+        <span class="ac-em">${p.e}</span>
+        <div class="ac-info"><div class="ac-name">${hl(p.n,q)}</div><div class="ac-meta">${p.c}</div></div>
+        <span class="ac-price">€ ${p.p.toFixed(2).replace('.',',')}</span>
+      </div>`;
+    });
+  });
+  box.innerHTML=html;
+  // Attach events after rendering (no inline onclick with complex data)
+  box.querySelectorAll('.ac-item').forEach(el=>{
+    el.addEventListener('click',()=>{
+      pick(el.getAttribute('data-pname'), parseFloat(el.getAttribute('data-pp')));
+    });
+  });
+  box.style.display='block';
+}
+
+function hl(name,q){
+  if(!q.trim())return eh(name);
+  const re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+  return eh(name).replace(re,'<mark style="background:rgba(245,200,66,.3);color:var(--accent);border-radius:2px;">$1</mark>');
+}
+
+function pick(name,preis){
+  document.getElementById('inpName').value=name;
+  document.getElementById('inpPreis').value=preis.toFixed(2);
+  document.getElementById('acBox').style.display='none';
+  // Prefill Preisrechner Referenzpreis
+  document.getElementById('calcEtikett').value=preis.toFixed(2);
+  document.getElementById('inpMenge').focus();
+}
+
+// ============ EINHEIT ============
+function setUnit(u){
+  unit=u;
+  document.getElementById('unitG').classList.toggle('active',u==='g');
+  document.getElementById('unitKg').classList.toggle('active',u==='kg');
+  if(document.getElementById('calcBox').classList.contains('show')) calcPreis();
+}
+
+// ============ PREISRECHNER ============
+// Zeige Rechner wenn Gewicht eingegeben wird
+function onGewichtChange(){
+  const gw=parseFloat(document.getElementById('inpGew').value);
+  if(gw>0){
+    document.getElementById('calcBox').classList.add('show');
+    calcPreis();
+  } else {
+    document.getElementById('calcBox').classList.remove('show');
+    document.getElementById('calcResult').classList.remove('show');
+  }
+}
+
+// Einheit → Basiswert in "kleinste Einheit" (g, ml, stk)
+function toBase(val, u){
+  if(u==='kg') return val*1000;
+  if(u==='l')  return val*1000;
+  return val; // g, ml, stk → 1:1
+}
+
+function calcPreis(){
+  // Etikett-Werte (was auf dem Preisschild steht)
+  const etPreis = parseFloat(document.getElementById('calcEtikett').value);
+  const etMenge = parseFloat(document.getElementById('calcEtikettMenge').value)||1;
+  const etUnit  = document.getElementById('calcEtikettUnit').value;
+  // Mein Gewicht (was ich wirklich kaufe)
+  const meinGew  = parseFloat(document.getElementById('inpGew').value);
+  const meinUnit = unit; // g oder kg aus dem Hauptformular
+  const result   = document.getElementById('calcResult');
+
+  if(isNaN(etPreis)||isNaN(meinGew)||meinGew<=0||etPreis<=0){
+    result.classList.remove('show'); return;
+  }
+
+  // Alles in Basiseinheit umrechnen
+  const etBase   = toBase(etMenge, etUnit);
+  const meinBase = toBase(meinGew, meinUnit);
+
+  // Preis proportional
+  const preis = (etPreis / etBase) * meinBase;
+  lastCalcPrice = preis;
+
+  document.getElementById('calcResVal').textContent = '€ '+fmt(preis);
+  document.getElementById('calcResSub').textContent =
+    meinGew+meinUnit+' × ('+fmt(etPreis)+'€ ÷ '+etMenge+etUnit+') = '+fmt(preis)+'€';
+  result.classList.add('show');
+}
+
+function useCalcPrice(){
+  if(lastCalcPrice===null)return;
+  document.getElementById('inpPreis').value=lastCalcPrice.toFixed(2);
+  const inp=document.getElementById('inpPreis');
+  inp.style.borderColor='var(--success)';
+  setTimeout(()=>{inp.style.borderColor='';},1000);
+}
+
+// ============ ARTIKEL HINZUFÜGEN ============
+function addItem(){
+  const name=document.getElementById('inpName').value.trim();
+  const preis=parseFloat(document.getElementById('inpPreis').value);
+  const menge=parseInt(document.getElementById('inpMenge').value)||1;
+  const gw=document.getElementById('inpGew').value;
+  const gewicht=gw?parseFloat(gw):null;
+  if(!name){shake('inpName');return;}
+  if(isNaN(preis)||preis<0){shake('inpPreis');return;}
+  const prod=PRODUCTS.find(p=>p.n.toLowerCase()===name.toLowerCase());
+  const emoji=prod?prod.e:'🛍️';
+  items.push({id:Date.now(),name,preis,menge,gewicht,einheit:unit,emoji,checked:false});
+  save();render();
+  document.getElementById('inpName').value='';
+  document.getElementById('inpPreis').value='';
+  document.getElementById('inpMenge').value='1';
+  document.getElementById('inpGew').value='';
+  document.getElementById('calcBox').classList.remove('show');
+  document.getElementById('calcResult').classList.remove('show');
+  document.getElementById('acBox').style.display='none';
+  lastCalcPrice=null;
+  document.getElementById('inpName').focus();
+}
+
+// ============ EDIT MODAL ============
+function openEdit(id){
+  const it=items.find(i=>i.id===id);
+  if(!it)return;
+  editId=id;
+  editUnit=it.einheit||'g';
+  document.getElementById('editName').value=it.name;
+  document.getElementById('editPreis').value=it.preis.toFixed(2);
+  document.getElementById('editMenge').value=it.menge;
+  document.getElementById('editGew').value=it.gewicht||'';
+  setEditUnit(editUnit);
+  document.getElementById('editOverlay').classList.add('open');
+}
+
+function setEditUnit(u){
+  editUnit=u;
+  document.getElementById('editUnitG').classList.toggle('active',u==='g');
+  document.getElementById('editUnitKg').classList.toggle('active',u==='kg');
+}
+
+function closeEditModal(){
+  document.getElementById('editOverlay').classList.remove('open');
+  editId=null;
+}
+
+function closeEdit(e){
+  if(e.target===document.getElementById('editOverlay'))closeEditModal();
+}
+
+function saveEdit(){
+  if(!editId)return;
+  const it=items.find(i=>i.id===editId);
+  if(!it)return;
+  const name=document.getElementById('editName').value.trim();
+  const preis=parseFloat(document.getElementById('editPreis').value);
+  const menge=parseInt(document.getElementById('editMenge').value)||1;
+  const gw=document.getElementById('editGew').value;
+  if(!name){document.getElementById('editName').style.borderColor='var(--danger)';return;}
+  if(isNaN(preis)||preis<0){document.getElementById('editPreis').style.borderColor='var(--danger)';return;}
+  it.name=name;it.preis=preis;it.menge=menge;
+  it.gewicht=gw?parseFloat(gw):null;it.einheit=editUnit;
+  const prod=PRODUCTS.find(p=>p.n.toLowerCase()===name.toLowerCase());
+  if(prod)it.emoji=prod.e;
+  save();render();closeEditModal();
+}
+
+// ============ HILFS ============
+function save(){localStorage.setItem('ekl3',JSON.stringify(items));}
+function fmt(v){return v.toFixed(2).replace('.',',');}
+function eh(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function shake(id){const el=document.getElementById(id);el.style.borderColor='var(--danger)';el.style.animation='shake .3s ease';setTimeout(()=>{el.style.borderColor='';el.style.animation='';},600);}
+function toggleCheck(id){const it=items.find(i=>i.id===id);if(it){it.checked=!it.checked;save();render();}}
+function deleteItem(id){items=items.filter(i=>i.id!==id);save();render();}
+function clearAll(){if(!items.length)return;if(confirm('Alle Artikel löschen?')){items=[];save();render();}}
+
+// ============ RENDER ============
+function render(){
+  const list=document.getElementById('itemsList');
+  const tot=items.reduce((s,i)=>s+i.preis*i.menge,0);
+  const stk=items.reduce((s,i)=>s+i.menge,0);
+  document.getElementById('totDisp').textContent=fmt(tot);
+  document.getElementById('icount').textContent=items.length+' Artikel';
+  document.getElementById('sumIts').textContent=items.length+' Artikel · '+stk+' Stück';
+  if(!items.length){
+    list.innerHTML='<div class="empty"><div class="empty-icon">🧺</div><p>Noch keine Artikel.<br>Suche oder tippe einen Artikel!</p></div>';
+    return;
+  }
+  list.innerHTML='';
+  items.forEach(it=>{
+    const card=document.createElement('div');
+    card.className='icard'+(it.checked?' chk':'');
+    let sub='';
+    if(it.menge>1)sub+='×'+it.menge;
+    if(it.gewicht)sub+=(sub?' · ':'')+it.gewicht+(it.einheit||'g');
+    card.innerHTML=`
+      <div class="inw">
+        <div class="ichk${it.checked?' on':''}" data-id="${it.id}"></div>
+        <span class="iem">${it.emoji}</span>
+        <div class="iinf">
+          <div class="iname">${eh(it.name)}</div>
+          ${sub?'<div class="isub">'+sub+'</div>':''}
+        </div>
+      </div>
+      <div class="ipr">€ ${fmt(it.preis)}</div>
+      <div class="itot">€ ${fmt(it.preis*it.menge)}</div>
+      <div class="iactions">
+        <button class="bedit" data-id="${it.id}" title="Bearbeiten">✏️</button>
+        <button class="bdel" data-id="${it.id}" title="Löschen">✕</button>
+      </div>`;
+    // Attach events safely (no inline onclick with closures)
+    card.querySelector('.ichk').addEventListener('click',()=>toggleCheck(it.id));
+    card.querySelector('.bedit').addEventListener('click',()=>openEdit(it.id));
+    card.querySelector('.bdel').addEventListener('click',()=>deleteItem(it.id));
+    list.appendChild(card);
+  });
+}
+
+// ============ INIT ============
+buildCats();
+render();
+
+const inp=document.getElementById('inpName');
+inp.addEventListener('input',filterAC);
+inp.addEventListener('focus',filterAC);
+inp.addEventListener('keydown',e=>{
+  const box=document.getElementById('acBox');
+  const its=[...box.querySelectorAll('.ac-item')];
+  if(e.key==='ArrowDown'){e.preventDefault();acIdx=Math.min(acIdx+1,its.length-1);its.forEach((el,i)=>el.classList.toggle('sel',i===acIdx));if(its[acIdx])its[acIdx].scrollIntoView({block:'nearest'});}
+  else if(e.key==='ArrowUp'){e.preventDefault();acIdx=Math.max(acIdx-1,-1);its.forEach((el,i)=>el.classList.toggle('sel',i===acIdx));}
+  else if(e.key==='Enter'){if(acIdx>=0&&its[acIdx])its[acIdx].click();else addItem();}
+  else if(e.key==='Escape'){box.style.display='none';}
+});
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.search-wrap'))document.getElementById('acBox').style.display='none';
+});
+['inpPreis','inpMenge','inpGew'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')addItem();});
+});
+
+// ── PWA SERVICE WORKER ──────────────────────
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+
+// ── PWA INSTALL BANNER ──────────────────────
+let deferredPrompt = null;
+
+// Chrome/Android: automatisch fragen
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Sofort anzeigen ohne Verzögerung
+  if (!localStorage.getItem('pwa_dismissed')) {
+    showInstallBanner();
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  localStorage.setItem('pwa_installed', '1');
+  dismissBanner();
+});
+
+function showInstallBanner() {
+  if (document.getElementById('installBanner')) return;
+  const el = document.createElement('div');
+  el.id = 'installBanner';
+  el.style.cssText = 'position:fixed;bottom:110px;left:12px;right:12px;z-index:9999;animation:slideUp .3s ease;';
+  el.innerHTML = '<div style="background:#1a1916;border:2px solid #f5c842;border-radius:18px;padding:16px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 40px rgba(0,0,0,.7);">'
+    + '<span style="font-size:32px;flex-shrink:0;">📲</span>'
+    + '<div style="flex:1;">'
+    + '<div style="font-size:14px;font-weight:800;color:#f5c842;margin-bottom:4px;">App installieren</div>'
+    + '<div style="font-size:12px;color:#7a7770;font-family:monospace;line-height:1.4;">Zum Homescreen hinzufügen &amp; offline nutzen</div>'
+    + '</div>'
+    + '<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">'
+    + '<button id="btnInstall" style="background:#f5c842;color:#0f0e0c;border:none;border-radius:10px;font-weight:800;font-size:13px;padding:9px 14px;cursor:pointer;">Installieren</button>'
+    + '<button id="btnDismiss" style="background:transparent;color:#7a7770;border:1px solid #2e2c28;border-radius:10px;font-size:11px;padding:6px 14px;cursor:pointer;">Nicht jetzt</button>'
+    + '</div></div>';
+  document.body.appendChild(el);
+  document.getElementById('btnInstall').addEventListener('click', doInstall);
+  document.getElementById('btnDismiss').addEventListener('click', dismissBanner);
+}
+
+function doInstall() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(r => {
+    if (r.outcome === 'accepted') localStorage.setItem('pwa_installed', '1');
+    dismissBanner();
+    deferredPrompt = null;
+  });
+}
+
+function dismissBanner() {
+  const el = document.getElementById('installBanner');
+  if (el) el.remove();
+  localStorage.setItem('pwa_dismissed', '1');
+}
+
+// iOS Safari Anleitung
+function isIOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream; }
+function isStandalone() { return window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches; }
+
+if (isIOS() && !isStandalone() && !localStorage.getItem('pwa_installed')) {
+  setTimeout(() => {
+    if (document.getElementById('iosBanner')) return;
+    const el = document.createElement('div');
+    el.id = 'iosBanner';
+    el.style.cssText = 'position:fixed;bottom:110px;left:12px;right:12px;z-index:9999;';
+    el.innerHTML = '<div style="background:#1a1916;border:2px solid #f5c842;border-radius:18px;padding:16px;box-shadow:0 8px 40px rgba(0,0,0,.7);">'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'
+      + '<span style="font-size:26px;">📲</span>'
+      + '<div style="font-size:13px;font-weight:800;color:#f5c842;flex:1;">Als iPhone-App installieren</div>'
+      + '<button onclick="this.closest('#iosBanner').remove();localStorage.setItem('pwa_installed','1');" style="background:none;border:none;color:#7a7770;font-size:20px;cursor:pointer;padding:0;">✕</button>'
+      + '</div>'
+      + '<div style="font-size:12px;color:#f0ece3;line-height:1.9;font-family:monospace;">'
+      + '1. Tippe auf <strong style="color:#f5c842;">Teilen</strong> ⬆️ unten in Safari<br>'
+      + '2. Wähle <strong style="color:#f5c842;">„Zum Home-Bildschirm"</strong> ➕<br>'
+      + '3. Tippe <strong style="color:#f5c842;">„Hinzufügen"</strong>'
+      + '</div></div>';
+    document.body.appendChild(el);
+  }, 2000);
+}
+</script>
+</body>
+</html>
