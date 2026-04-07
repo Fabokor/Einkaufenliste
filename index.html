@@ -264,14 +264,14 @@ body{background:var(--bg);color:var(--txt);font-family:'Syne',sans-serif;min-hei
 
 <!-- BEARBEITEN MODAL -->
 <div class="modal-bg" id="modalBg">
-  <div class="modal" id="modal">
+  <div class="modal" id="modal" style="overflow-y:auto;max-height:92vh;">
     <div class="modal-handle"></div>
     <div class="modal-title">✏️ Artikel bearbeiten</div>
     <div class="modal-grid">
       <div class="mf full"><label>Name</label><input type="text" id="editName"></div>
-      <div class="mf"><label>Preis (€)</label><input type="number" id="editPreis" min="0" step="0.01"></div>
+      <div class="mf"><label>Preis (€)</label><input type="number" id="editPreis" min="0" step="0.01" placeholder="0,00"></div>
       <div class="mf"><label>Menge</label><input type="number" id="editMenge" min="1" step="1"></div>
-      <div class="mf"><label>Gewicht <span class="opt">opt.</span></label><input type="number" id="editGew" min="0" step="any"></div>
+      <div class="mf"><label>Gewicht <span class="opt">opt.</span></label><input type="number" id="editGew" min="0" step="any" placeholder="z.B. 800"></div>
       <div class="mf">
         <label>Einheit</label>
         <div class="modal-urow">
@@ -280,6 +280,40 @@ body{background:var(--bg);color:var(--txt);font-family:'Syne',sans-serif;min-hei
         </div>
       </div>
     </div>
+
+    <!-- PREISRECHNER IM MODAL -->
+    <div id="editCalcBox" style="background:var(--sur2);border:1px solid rgba(245,200,66,.25);border-radius:12px;padding:12px 13px;margin-bottom:14px;display:none;">
+      <div style="font-size:11px;color:var(--mut);margin-bottom:9px;line-height:1.5;">
+        ⚖️ <strong style="color:var(--txt);">Preisrechner:</strong> Etikett eingeben → Preis wird automatisch berechnet.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-bottom:9px;">
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <label style="font-size:10px;font-weight:700;color:var(--acc2);font-family:'DM Mono',monospace;">€ Preis auf Etikett</label>
+          <input type="number" id="eCalcEt" placeholder="z.B. 6,99" min="0" step="0.01"
+            style="background:var(--bg);border:1.5px solid var(--brd);border-radius:8px;color:var(--txt);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;padding:9px;outline:none;width:100%;text-align:center;">
+        </div>
+        <div style="font-size:14px;color:var(--mut);text-align:center;padding-top:17px;">pro</div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <label style="font-size:10px;font-weight:700;color:var(--acc2);font-family:'DM Mono',monospace;">Menge auf Etikett</label>
+          <div style="display:flex;gap:3px;">
+            <input type="number" id="eCalcMg" placeholder="1" min="0" step="any"
+              style="background:var(--bg);border:1.5px solid var(--brd);border-radius:8px 0 0 8px;border-right:none;color:var(--txt);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;padding:9px;outline:none;width:100%;text-align:center;">
+            <select id="eCalcUnit" style="background:var(--bg);border:1.5px solid var(--brd);border-radius:0 8px 8px 0;color:var(--acc);font-family:'DM Mono',monospace;font-size:12px;font-weight:700;padding:9px 5px;outline:none;cursor:pointer;width:52px;">
+              <option value="kg">kg</option>
+              <option value="g">g</option>
+              <option value="l">l</option>
+              <option value="ml">ml</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="editCalcRes" style="background:rgba(245,200,66,.08);border:1.5px solid rgba(245,200,66,.3);border-radius:9px;padding:11px 13px;display:none;text-align:center;">
+        <div id="editCalcVal" style="font-size:24px;font-weight:800;color:var(--acc);margin-bottom:2px;">€ 0,00</div>
+        <div id="editCalcSub" style="font-size:10px;color:var(--mut);font-family:'DM Mono',monospace;margin-bottom:8px;"></div>
+        <button id="btnEditUsePrice" style="width:100%;background:var(--acc);color:#0f0e0c;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;padding:9px;cursor:pointer;">✓ Diesen Preis verwenden</button>
+      </div>
+    </div>
+
     <div class="modal-btns">
       <button class="btn-cancel" id="btnCancel">Abbrechen</button>
       <button class="btn-save" id="btnSave">💾 Speichern</button>
@@ -587,8 +621,55 @@ function openEdit(id) {
   document.getElementById('editPreis').value = fmt(it.preis);
   document.getElementById('editMenge').value = it.menge;
   document.getElementById('editGew').value = it.gewicht || '';
+  // Preisrechner vorausfüllen
+  document.getElementById('eCalcEt').value = fmt(it.preis);
+  document.getElementById('eCalcMg').value = '1';
+  document.getElementById('eCalcUnit').value = 'kg';
   setEditUnit(editUnit);
+  // Rechner anzeigen wenn Gewicht vorhanden
+  var calcBox = document.getElementById('editCalcBox');
+  if (it.gewicht) {
+    calcBox.style.display = 'block';
+    doEditCalc();
+  } else {
+    calcBox.style.display = 'none';
+    document.getElementById('editCalcRes').style.display = 'none';
+  }
   document.getElementById('modalBg').classList.add('open');
+}
+
+function setEditUnit(u) {
+  editUnit = u;
+  document.getElementById('editUnitG').classList.toggle('on', u === 'g');
+  document.getElementById('editUnitKg').classList.toggle('on', u === 'kg');
+  doEditCalc();
+}
+
+function onEditGewChange() {
+  var gw = p2f(document.getElementById('editGew').value);
+  var box = document.getElementById('editCalcBox');
+  if (gw > 0) { box.style.display = 'block'; doEditCalc(); }
+  else { box.style.display = 'none'; document.getElementById('editCalcRes').style.display = 'none'; }
+}
+
+function doEditCalc() {
+  var etPreis = p2f(document.getElementById('eCalcEt').value);
+  var etMenge = p2f(document.getElementById('eCalcMg').value) || 1;
+  var etUnit  = document.getElementById('eCalcUnit').value;
+  var meinGew = p2f(document.getElementById('editGew').value);
+  var res = document.getElementById('editCalcRes');
+  if (!etPreis || !meinGew) { res.style.display = 'none'; return; }
+  var preis = (etPreis / toBase(etMenge, etUnit)) * toBase(meinGew, editUnit);
+  document.getElementById('editCalcVal').textContent = '€ ' + fmt(preis);
+  document.getElementById('editCalcSub').textContent =
+    meinGew + editUnit + ' × (' + fmt(etPreis) + '€ ÷ ' + etMenge + etUnit + ') = ' + fmt(preis) + '€';
+  res.style.display = 'block';
+  document.getElementById('btnEditUsePrice').onclick = function() {
+    document.getElementById('editPreis').value = fmt(preis);
+    var el = document.getElementById('editPreis');
+    el.style.borderColor = 'var(--ok)';
+    setTimeout(function() { el.style.borderColor = ''; }, 1000);
+  };
 }
 
 function closeModal() {
@@ -729,6 +810,11 @@ document.getElementById('btnCancel').addEventListener('click', closeModal);
 document.getElementById('modalBg').addEventListener('click', function(e) { if(e.target === this) closeModal(); });
 document.getElementById('editUnitG').addEventListener('click', function() { setEditUnit('g'); });
 document.getElementById('editUnitKg').addEventListener('click', function() { setEditUnit('kg'); });
+// Edit-Preisrechner
+document.getElementById('editGew').addEventListener('input', onEditGewChange);
+document.getElementById('eCalcEt').addEventListener('input', doEditCalc);
+document.getElementById('eCalcMg').addEventListener('input', doEditCalc);
+document.getElementById('eCalcUnit').addEventListener('change', doEditCalc);
 
 // Leeren
 document.getElementById('btnClear').addEventListener('click', clearAll);
